@@ -4,14 +4,15 @@ import {
   IoSearch, 
   IoPersonCircleOutline,
   IoSunny,
-  IoMoon
+  IoMoon,
+  IoGitNetwork
 } from 'react-icons/io5';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import Button from '../shared/Button';
 import NotificationBell from '../notifications/NotificationBell';
 
-const Header = ({ onAuthModalOpen }) => {
+const Header = ({ onAuthModalOpen, onGraphOpen }) => {
   const { user } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +65,18 @@ const Header = ({ onAuthModalOpen }) => {
           
           {/* Right Side Actions */}
           <div className="flex items-center space-x-4">
+            
+            {/* Graph View Button */}
+            {user && (
+              <button
+                onClick={onGraphOpen}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label="View social graph"
+                title="View Social Graph"
+              >
+                <IoGitNetwork className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            )}
             
             {/* Theme Toggle */}
             <button

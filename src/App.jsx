@@ -5,11 +5,15 @@ import { db } from './utils/firebase';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/layout/Layout';
 import ProfileCard from './components/profile/ProfileCard';
+import ProfileModal from './components/profile/ProfileModal';
 import MessagePanel from './components/messaging/MessagePanel';
 import ActivityFeed from './components/notifications/ActivityFeed';
+import AIChatInterface from './components/ai/AIChatInterface';
+import SocialGraph from './components/ai/SocialGraph';
+import RecommendationsPanel from './components/ai/RecommendationsPanel';
 import Button from './components/shared/Button';
 import Badge from './components/shared/Badge';
-import { IoRefresh, IoAdd, IoChatbubblesOutline } from 'react-icons/io5';
+import { IoRefresh, IoAdd, IoChatbubblesOutline, IoGitNetwork } from 'react-icons/io5';
 import { Toaster } from 'react-hot-toast';
 
 const App = () => {
@@ -18,7 +22,12 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isMessagePanelOpen, setIsMessagePanelOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
+  const [isAIChatMinimized, setIsAIChatMinimized] = useState(true);
+  const [isGraphOpen, setIsGraphOpen] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(true);
   const [profile, setProfile] = useState({
     name: '',
     project: '',
@@ -129,16 +138,6 @@ const App = () => {
     }
   };
 
-  // Group users by status
-  const groupedUsers = userProfiles.reduce((acc, userProfile) => {
-    const status = userProfile.status || 'Away';
-    if (!acc[status]) {
-      acc[status] = [];
-    }
-    acc[status].push(userProfile);
-    return acc;
-  }, {});
-
   // Simulate external user updates
   const simulateUserUpdate = async (simUserId, newStatus) => {
     try {
@@ -159,8 +158,8 @@ const App = () => {
   };
 
   const handleViewProfile = (targetUser) => {
-    console.log('View profile:', targetUser);
-    // TODO: Implement profile modal
+    setSelectedUser(targetUser);
+    setIsProfileModalOpen(true);
   };
 
   const renderContent = () => {
@@ -182,9 +181,20 @@ const App = () => {
     }
   };
 
-  const renderHomeContent = () => (
-    <div className="space-y-8">
-      {/* User Profile Section */}
+  const renderHomeContent = () => {
+    // Group users by status
+    const groupedUsers = userProfiles.reduce((acc, userProfile) => {
+      const status = userProfile.status || 'Away';
+      if (!acc[status]) {
+        acc[status] = [];
+      }
+      acc[status].push(userProfile);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-8">
+        {/* User Profile Section */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Your Profile</h2>
         
@@ -371,7 +381,8 @@ const App = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderMessagesContent = () => (
     <div className="space-y-6">
@@ -457,11 +468,12 @@ const App = () => {
         <Toaster position="top-right" />
         
         {/* Auth Modal */}
-        <Layout 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
-          onAuthModalOpen={() => {}}
-        >
+          <Layout
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onAuthModalOpen={() => {}}
+            onGraphOpen={() => setIsGraphOpen(true)}
+          >
           <div className="flex items-center justify-center min-h-[80vh]">
             <div className="text-center">
               <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-accent-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
@@ -497,28 +509,52 @@ const App = () => {
         onClose={() => setIsMessagePanelOpen(false)} 
       />
       
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedUser(null);
+        }}
+        userProfile={selectedUser}
+        isOwnProfile={selectedUser?.uid === user?.uid}
+      />
+      
+      {/* AI Chat Interface */}
+      {user && (
+        <AIChatInterface
+          isMinimized={isAIChatMinimized}
+          onToggleMinimize={() => setIsAIChatMinimized(!isAIChatMinimized)}
+          onUserSelect={handleViewProfile}
+          allUsers={userProfiles}
+        />
+      )}
+      
+      {/* Social Graph */}
+      <SocialGraph
+        users={userProfiles}
+        isOpen={isGraphOpen}
+        onClose={() => setIsGraphOpen(false)}
+        onNodeClick={handleViewProfile}
+      />
+      
+      {/* Recommendations Panel */}
+      {user && showRecommendations && (
+        <RecommendationsPanel
+          users={userProfiles}
+          onUserSelect={handleViewProfile}
+          onClose={() => setShowRecommendations(false)}
+        />
+      )}
+      
       <Layout 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
         onAuthModalOpen={() => {}}
+        onGraphOpen={() => setIsGraphOpen(true)}
       >
         {renderContent()}
       </Layout>
-      
-      {/* Floating Action Button for Messages */}
-      {user && (
-        <motion.button
-          onClick={() => setIsMessagePanelOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-primary-600 hover:bg-primary-700 text-white rounded-full shadow-lg flex items-center justify-center z-40"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1 }}
-        >
-          <IoChatbubblesOutline className="w-6 h-6" />
-        </motion.button>
-      )}
     </div>
   );
 };

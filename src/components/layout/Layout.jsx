@@ -4,7 +4,7 @@ import Header from './Header';
 import Sidebar from './Sidebar';
 import AuthModal from '../auth/AuthModal';
 
-const Layout = ({ children, activeTab, onTabChange, onAuthModalOpen }) => {
+const Layout = ({ children, activeTab, onTabChange, onAuthModalOpen, onGraphOpen }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   const handleAuthModalOpen = () => {
@@ -17,7 +17,10 @@ const Layout = ({ children, activeTab, onTabChange, onAuthModalOpen }) => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       
       {/* Header */}
-      <Header onAuthModalOpen={handleAuthModalOpen} />
+      <Header 
+        onAuthModalOpen={handleAuthModalOpen} 
+        onGraphOpen={onGraphOpen}
+      />
       
       {/* Main Content */}
       <div className="flex flex-1">

@@ -1,0 +1,146 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isParticipant(participants) {
+      return request.auth.uid in participants;
+    }
+    
+    // Users collection - user profiles
+    match /users/{userId} {
+      // Anyone can read profiles (for discovery)
+      allow read: if isAuthenticated();
+      
+      // Users can only create/update their own profile
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && isOwner(userId);
+      
+      // Users cannot delete profiles
+      allow delete: if false;
+    }
+    
+    // Conversations collection - chat conversations
+    match /conversations/{conversationId} {
+      // Can read if you're a participant
+      allow read: if isAuthenticated() && 
+                     isParticipant(resource.data.participants);
+      
+      // Can create if you're in the participants list
+      allow create: if isAuthenticated() && 
+                       isParticipant(request.resource.data.participants);
+      
+      // Can update if you're a participant
+      allow update: if isAuthenticated() && 
+                       isParticipant(resource.data.participants);
+      
+      // Cannot delete conversations
+      allow delete: if false;
+    }
+    
+    // Messages collection - chat messages
+    match /messages/{messageId} {
+      // Can read messages if authenticated
+      // (Additional validation: client should filter by conversationId)
+      allow read: if isAuthenticated();
+      
+      // Can create messages if you're the sender
+      allow create: if isAuthenticated() && 
+                       isOwner(request.resource.data.senderId);
+      
+      // Can update your own messages (for editing)
+      allow update: if isAuthenticated() && 
+                       isOwner(resource.data.senderId);
+      
+      // Cannot delete messages
+      allow delete: if false;
+    }
+    
+    // Notifications collection - user notifications
+    match /notifications/{notificationId} {
+      // Can read your own notifications
+      allow read: if isAuthenticated() && 
+                     isOwner(resource.data.userId);
+      
+      // System can create notifications
+      allow create: if isAuthenticated();
+      
+      // Can update your own notifications (mark as read)
+      allow update: if isAuthenticated() && 
+                       isOwner(resource.data.userId);
+      
+      // Can delete your own notifications
+      allow delete: if isAuthenticated() && 
+                       isOwner(resource.data.userId);
+    }
+    
+    // Projects collection - project information
+    match /projects/{projectId} {
+      // Anyone can read projects
+      allow read: if isAuthenticated();
+      
+      // Can create if you're the creator
+      allow create: if isAuthenticated() && 
+                       isOwner(request.resource.data.createdBy);
+      
+      // Can update if you're the creator or a team member
+      allow update: if isAuthenticated() && 
+                       (isOwner(resource.data.createdBy) || 
+                        request.auth.uid in resource.data.teamMembers);
+      
+      // Can delete if you're the creator
+      allow delete: if isAuthenticated() && 
+                       isOwner(resource.data.createdBy);
+    }
+    
+    // Legacy collection for backwards compatibility
+    match /meloyProfiles/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+  }
+}
+
+// Firebase Storage Rules
+// Copy these to Firebase Console > Storage > Rules
+/*
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Profile pictures
+    match /profile-pictures/{userId}/{filename} {
+      // Anyone can read profile pictures
+      allow read: if true;
+      
+      // Only the user can upload their own profile picture
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      request.resource.size < 5 * 1024 * 1024 && // Max 5MB
+                      request.resource.contentType.matches('image/.*');
+    }
+    
+    // Project assets
+    match /project-assets/{projectId}/{filename} {
+      // Anyone authenticated can read
+      allow read: if request.auth != null;
+      
+      // Project team members can upload
+      allow write: if request.auth != null &&
+                      request.resource.size < 10 * 1024 * 1024 && // Max 10MB
+                      request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+*/
+
